@@ -84,4 +84,15 @@ public interface NotificationRecordPort {
      * @return the notification, or empty when no such row exists
      */
     Optional<Notification> findById(String idNotification);
+
+    /**
+     * Whether anything was ever attempted about one alert or recommendation, on any channel and
+     * for any recipient. The broker may deliver its event twice, and this is what lets the second
+     * one stop instead of mailing and pushing every member again.
+     *
+     * @param sourceType what the source is
+     * @param sourceId   the alert or recommendation
+     * @return true when at least one row refers to it, whatever its outcome
+     */
+    boolean anyAbout(NotificationSourceType sourceType, String sourceId);
 }

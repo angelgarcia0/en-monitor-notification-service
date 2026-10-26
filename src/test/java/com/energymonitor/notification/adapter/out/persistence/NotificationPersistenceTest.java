@@ -125,4 +125,16 @@ class NotificationPersistenceTest extends JwtKeyedTest {
         assertThat(read.deliveryStatus()).isEqualTo(NotificationStatus.FAILED);
         assertThat(read.failureReason()).hasSize(200);
     }
+
+    @Test
+    @DisplayName("a source with a row of the log counts as attempted, whatever the outcome")
+    void anyAboutFindsTheSourceOfARow() {
+        open(SENT_ID);
+        notifications.recordFailure(SENT_ID, "connection refused");
+
+        assertThat(notifications.anyAbout(NotificationSourceType.SECURITY, "rst0000001")).isTrue();
+        assertThat(notifications.anyAbout(NotificationSourceType.RECOMMENDATION, "rst0000001"))
+                .as("same identifier, another kind of source")
+                .isFalse();
+    }
 }

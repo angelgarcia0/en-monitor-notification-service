@@ -74,4 +74,11 @@ public interface NotificationRepository extends JpaRepository<NotificationEntity
             String userId, com.energymonitor.notification.domain.model.NotificationChannel channel,
             com.energymonitor.notification.domain.model.NotificationSourceType sourceType,
             String sourceId, String messageKey, java.time.LocalDateTime sentAt);
+
+    /**
+     * Whether any row, of any recipient and channel, refers to one source row. Deleted rows count.
+     */
+    boolean existsBySourceTypeAndSourceId(
+            com.energymonitor.notification.domain.model.NotificationSourceType sourceType,
+            String sourceId);
 }

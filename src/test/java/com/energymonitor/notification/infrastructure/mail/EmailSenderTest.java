@@ -209,5 +209,10 @@ class EmailSenderTest {
         public Optional<Notification> findById(String idNotification) {
             return Optional.empty();
         }
+
+        @Override
+        public boolean anyAbout(NotificationSourceType sourceType, String sourceId) {
+            return false;
+        }
     }
 }

@@ -87,4 +87,10 @@ public class NotificationPersistenceAdapter implements NotificationRecordPort {
     public Optional<Notification> findById(String idNotification) {
         return repository.findById(idNotification).map(mapper::toDomain);
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean anyAbout(NotificationSourceType sourceType, String sourceId) {
+        return repository.existsBySourceTypeAndSourceId(sourceType, sourceId);
+    }
 }
