@@ -1,0 +1,2 @@
+# en-monitor-notification-service
+EnergyMonitor notification microservice: delivers the alerts and recommendations to the members of a home by mail, Web Push and mobile push according to each member's preferences, mails the verification and recovery codes of the security service, keeps the in-app notifications of the administrators and the delivery log, and manages each user's notification channels. Spring Boot 4, Java 21, hexagonal architecture.
