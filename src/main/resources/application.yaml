@@ -72,6 +72,15 @@ messaging:
     # same events from queues of its own, and with both an administrator notification could be
     # written twice. Switched on in the deployment that removes the module.
     enabled: ${SECURITY_EVENTS_CONSUMER_ENABLED:false}
+  # Topic exchanges energy-monitor-backend announces its alerts (alert.raised) and recommendations
+  # (recommendation.created) to.
+  alert-exchange: energy-monitor.alert
+  recommendation-exchange: energy-monitor.recommendation
+  home-messages:
+    # Off until energy-monitor-backend's notification module is removed: the backend delivers its
+    # alerts in process, and with both every member would get each one twice. Switched on in the
+    # deployment that removes the module.
+    enabled: ${ALERT_EVENTS_CONSUMER_ENABLED:false}
 
 app:
   mail:
@@ -146,6 +155,8 @@ management:
       enabled: false
 
 notification:
+  # Base URL of the web app, for the links in alert mail.
+  web-url: ${NOTIFICATION_WEB_URL:http://localhost:5173}
   push:
     # VAPID key pair for Web Push (base64url: public = 65-byte point, private = 32-byte scalar).
     # The same pair energy-monitor-backend used: browsers bind their subscription to the public

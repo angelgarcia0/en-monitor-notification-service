@@ -33,6 +33,9 @@ messaging:
   security-events:
     # No queue in the suite: the consumers are exercised by calling them directly.
     enabled: false
+  home-messages:
+    # No queue in the suite either.
+    enabled: false
 
 spring.rabbitmq.listener.simple:
   # A test context must not take messages from a queue a running service consumes.

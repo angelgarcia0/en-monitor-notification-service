@@ -11,22 +11,26 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
 
 /**
- * The application with the security events switched on, as it runs after the cut-over: both
- * consumers and their queues are wired. The listeners do not start (test profile), so no message
- * is taken from a broker.
+ * The application with every consumer switched on, as it runs after the cut-over: the consumers
+ * and their queues are wired. The listeners do not start (test profile), so no message is taken
+ * from a broker.
  */
-@SpringBootTest(properties = "messaging.security-events.enabled=true")
-@DisplayName("Security events switched on")
-class SecurityEventsWiringTest extends JwtKeyedTest {
+@SpringBootTest(properties = {
+    "messaging.security-events.enabled=true",
+    "messaging.home-messages.enabled=true"
+})
+@DisplayName("Messaging switched on")
+class SwitchedOnMessagingTest extends JwtKeyedTest {
 
     @Autowired
     private ApplicationContext context;
 
     @Test
-    @DisplayName("both consumers and their queues are in the context")
+    @DisplayName("every consumer and both sets of queues are in the context")
     void wired() {
         assertThat(context.getBeansOfType(AccountEventsConsumer.class)).hasSize(1);
         assertThat(context.getBeansOfType(MailRequestsConsumer.class)).hasSize(1);
-        assertThat(context.getBeansOfType(Declarables.class)).hasSize(1);
+        assertThat(context.getBeansOfType(HomeMessagesConsumer.class)).hasSize(1);
+        assertThat(context.getBeansOfType(Declarables.class)).hasSize(2);
     }
 }
