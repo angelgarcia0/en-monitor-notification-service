@@ -44,6 +44,35 @@ spring:
           timeout: 5000
           writetimeout: 5000
 
+  # Message broker (RabbitMQ, from infra): the account events and mail requests of the security
+  # service. Each consumer declares and binds its own queue.
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:energy-monitor}
+    password: ${RABBITMQ_PASSWORD:}
+    listener:
+      simple:
+        # A message that keeps failing is retried three times, one, two and four seconds apart,
+        # and then moved to the dead-letter queue of its queue instead of blocking the ones behind.
+        default-requeue-rejected: false
+        retry:
+          enabled: true
+          max-attempts: 3
+          initial-interval: 1s
+          multiplier: 2
+
+messaging:
+  # Topic exchange the security service publishes to (account.*, mail.*), and the dead-letter
+  # exchange of the queues this service consumes.
+  security-exchange: energy-monitor.security
+  dead-letter-exchange: notification-service.dlx
+  security-events:
+    # Off until energy-monitor-backend's notification module is removed: the backend consumes the
+    # same events from queues of its own, and with both an administrator notification could be
+    # written twice. Switched on in the deployment that removes the module.
+    enabled: ${SECURITY_EVENTS_CONSUMER_ENABLED:false}
+
 app:
   mail:
     # The address outgoing mail is sent from, which is the same account that owns the app password.

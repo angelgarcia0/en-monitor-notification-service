@@ -28,3 +28,18 @@ home:
 device:
   service:
     url: http://127.0.0.1:9
+
+messaging:
+  security-events:
+    # No queue in the suite: the consumers are exercised by calling them directly.
+    enabled: false
+
+spring.rabbitmq.listener.simple:
+  # A test context must not take messages from a queue a running service consumes.
+  auto-startup: false
+
+management:
+  health:
+    # No broker is required to run the suite.
+    rabbit:
+      enabled: false
