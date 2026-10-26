@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        App installations that receive push through a relay (Expo), one row per installation.
+
+        This is not another kind of push_subscription. A browser subscription carries an https
+        endpoint and the two keys the payload is encrypted with (RFC 8291); a relay token carries
+        neither, and a mobile payload is sent in clear to the relay. Both shapes are kept in their
+        own table so neither has to pretend to be the other.
+
+        token identifies the installation, so it is unique: the same phone subscribing again
+        replaces the row and changes its owner rather than accumulating duplicates. platform is kept
+        because the relay is the same for both and the payload a phone accepts is not.
+    -->
+    <changeSet id="notification-005-create-push-device" author="JuanCortes2045">
+        <comment>Push tokens of app installations, delivered through a relay.</comment>
+        <createTable tableName="push_device">
+            <column name="id_push_device" type="VARCHAR(10)">
+                <constraints primaryKey="true" primaryKeyName="pk_push_device" nullable="false"/>
+            </column>
+            <column name="user_id" type="VARCHAR(10)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="token" type="VARCHAR(255)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uk_push_device_token"/>
+            </column>
+            <column name="platform" type="VARCHAR(10)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP"
+                    defaultValueComputed="CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="deleted_at" type="TIMESTAMP"/>
+        </createTable>
+        <createIndex tableName="push_device" indexName="idx_push_device_user_id">
+            <column name="user_id"/>
+        </createIndex>
+        <rollback>
+            <dropTable tableName="push_device"/>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>

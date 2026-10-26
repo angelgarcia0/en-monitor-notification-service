@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        Administrator notifications are rows of the same log, delivered over a new channel IN_APP
+        (shown in the web app, nothing leaves the platform) with the new source ADMINISTRATION.
+
+        Rollback deletes those rows first: the narrower ENUM could not hold them.
+    -->
+    <changeSet id="notification-004-add-in-app-admin-notifications" author="JuanCortes2045">
+        <comment>Adds the IN_APP channel and the ADMINISTRATION source for administrator notifications.</comment>
+
+        <modifyDataType tableName="notification" columnName="channel"
+                        newDataType="ENUM('EMAIL','PUSH','IN_APP')"/>
+        <addNotNullConstraint tableName="notification" columnName="channel"
+                              columnDataType="ENUM('EMAIL','PUSH','IN_APP')"/>
+        <modifyDataType tableName="notification" columnName="source_type"
+                        newDataType="ENUM('ALERT','RECOMMENDATION','SECURITY','ADMINISTRATION')"/>
+        <addNotNullConstraint tableName="notification" columnName="source_type"
+                              columnDataType="ENUM('ALERT','RECOMMENDATION','SECURITY','ADMINISTRATION')"/>
+
+        <rollback>
+            <delete tableName="notification">
+                <where>channel = 'IN_APP' OR source_type = 'ADMINISTRATION'</where>
+            </delete>
+            <modifyDataType tableName="notification" columnName="channel"
+                            newDataType="ENUM('EMAIL','PUSH')"/>
+            <addNotNullConstraint tableName="notification" columnName="channel"
+                                  columnDataType="ENUM('EMAIL','PUSH')"/>
+            <modifyDataType tableName="notification" columnName="source_type"
+                            newDataType="ENUM('ALERT','RECOMMENDATION','SECURITY')"/>
+            <addNotNullConstraint tableName="notification" columnName="source_type"
+                                  columnDataType="ENUM('ALERT','RECOMMENDATION','SECURITY')"/>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>

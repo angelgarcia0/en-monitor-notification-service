@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        Browsers that accepted Web Push. endpoint identifies a browser installation; p256dh and
+        auth are the keys the payload is encrypted with (RFC 8291). They are not secrets of the
+        server: they only let it write to that browser. Removed with the account (AccountDeleted).
+    -->
+    <changeSet id="notification-003-create-push-subscription" author="JuanCortes2045">
+        <comment>Web Push subscriptions per user.</comment>
+        <createTable tableName="push_subscription">
+            <column name="id_push_subscription" type="VARCHAR(10)">
+                <constraints primaryKey="true" primaryKeyName="pk_push_subscription" nullable="false"/>
+            </column>
+            <column name="user_id" type="VARCHAR(10)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="endpoint" type="VARCHAR(500)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uk_push_subscription_endpoint"/>
+            </column>
+            <column name="p256dh" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="auth" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP"
+                    defaultValueComputed="CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="deleted_at" type="TIMESTAMP"/>
+        </createTable>
+        <createIndex tableName="push_subscription" indexName="idx_push_subscription_user_id">
+            <column name="user_id"/>
+        </createIndex>
+        <rollback>
+            <dropTable tableName="push_subscription"/>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>

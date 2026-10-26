@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        Delivery log: one row per outbound message, recording where it came from and how it ended.
+
+        This is the record of a delivery, not the event that caused the message. Alert and
+        Recommendation keep their own lifecycle in their own modules; this table answers only the
+        question none of them can: was a message actually sent, over which channel, and did it fail.
+
+        No foreign keys. user_id points at the security module and home_id at the home module, and a
+        constraint would make this table impossible to create or migrate without both schemas beside
+        it, which is the coupling the module boundaries exist to prevent. The identifiers are
+        references without integrity, deliberately.
+
+        No message body. A password recovery code travels in the body of the message, and a column
+        holding it would undo the decision to keep only a peppered hash elsewhere. message_key names
+        the wording that was used instead, which is enough to explain a row during an audit and is
+        not itself the message.
+
+        PUSH is declared in the enum although only EMAIL is implemented, matching the documented
+        model: the channel is the part of the schema most likely to grow, and widening an enum is a
+        cheaper migration than introducing one.
+    -->
+    <changeSet id="notification-001-create-notification" author="JuanCortes2045">
+        <comment>Delivery log. References to other modules by identifier, never by foreign key.</comment>
+        <createTable tableName="notification">
+            <column name="id_notification" type="VARCHAR(10)">
+                <constraints primaryKey="true" primaryKeyName="pk_notification" nullable="false"/>
+            </column>
+            <!-- The account the message is for. Required: a message nobody can be traced to is useless. -->
+            <column name="user_id" type="VARCHAR(10)">
+                <constraints nullable="false"/>
+            </column>
+            <!-- The home it concerns, absent for messages about an account rather than a home. -->
+            <column name="home_id" type="VARCHAR(10)"/>
+            <column name="channel" type="ENUM('EMAIL','PUSH')">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Which module the message is about. SECURITY covers recovery codes sent for another module. -->
+            <column name="source_type" type="ENUM('ALERT','RECOMMENDATION','SECURITY')">
+                <constraints nullable="false"/>
+            </column>
+            <!-- That row, by identifier. Absent when the message is not about a particular row. -->
+            <column name="source_id" type="VARCHAR(10)"/>
+            <!-- Stable name of the wording used, never the wording itself. -->
+            <column name="message_key" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="delivery_status" type="ENUM('PENDING','SENT','FAILED')">
+                <constraints nullable="false"/>
+            </column>
+            <column name="sent_at" type="TIMESTAMP"/>
+            <!-- When the recipient opened it. Nothing writes it yet; the model asks for it. -->
+            <column name="read_at" type="TIMESTAMP"/>
+            <column name="failure_reason" type="VARCHAR(200)"/>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP"
+                    defaultValueComputed="CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="deleted_at" type="TIMESTAMP"/>
+        </createTable>
+
+        <rollback>
+            <dropTable tableName="notification"/>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>
