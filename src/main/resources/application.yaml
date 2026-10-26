@@ -78,3 +78,16 @@ management:
     web:
       exposure:
         include: health,info
+
+notification:
+  push:
+    # VAPID key pair for Web Push (base64url: public = 65-byte point, private = 32-byte scalar).
+    # The same pair energy-monitor-backend used: browsers bind their subscription to the public
+    # key, so a new pair silences every browser already subscribed. Empty = Web Push disabled.
+    vapid-public-key: ${NOTIFICATION_VAPID_PUBLIC_KEY:}
+    vapid-private-key: ${NOTIFICATION_VAPID_PRIVATE_KEY:}
+    subject: ${NOTIFICATION_VAPID_SUBJECT:mailto:support.energymonitor@gmail.com}
+    # Credential of the push relay the mobile apps publish through (Expo: "expo push token" in the
+    # project dashboard). Unlike the VAPID pair this is safe to rotate: it authorises us with the
+    # relay, it is not baked into any installation. Empty = app push disabled.
+    expo-access-token: ${EXPO_ACCESS_TOKEN:}
