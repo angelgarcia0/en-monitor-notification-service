@@ -1,0 +1,35 @@
+spring:
+  config:
+    import: optional:file:.env[.properties]
+  application:
+    name: notification-service
+
+  profiles:
+    default: local
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+
+  liquibase:
+    # Only the notification changesets. The schema is shared with energy-monitor-backend and the
+    # security, device, measurement and home services (ADR-003), and so is the DATABASECHANGELOG
+    # table: each service applies its own changelogs.
+    change-log: classpath:db/changelog/db.changelog-master.xml
+
+server:
+  # 8080 is the API gateway, 8082 the security service, 8083 energy-monitor-backend, 8084 the
+  # device service, 8085 the measurement service and 8086 the home service when all run on the
+  # same machine.
+  port: ${SERVER_PORT:8087}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

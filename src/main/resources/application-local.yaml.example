@@ -1,0 +1,11 @@
+# Local profile: copy to application-local.yaml (gitignored) and set the database password.
+#
+# Only what differs per machine lives here; the rest is read from .env (see .env.example).
+
+spring:
+  datasource:
+    # The schema shared with energy-monitor-backend and the security, device, measurement and
+    # home services (MySQL from the infra repository).
+    url: jdbc:mysql://localhost:3306/energy_monitor?connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true
+    username: energy_app
+    password: "CHANGE_ME"
