@@ -46,6 +46,17 @@ security:
     administrators-ttl: 30s
     profiles-ttl: 60s
 
+home:
+  # The home service: its internal API answers a home and its members, who an alert or a
+  # recommendation goes to. Answers are reused for a while, and the last one is served while the
+  # service does not answer.
+  service:
+    url: ${HOME_SERVICE_URL:http://localhost:8086}
+    connect-timeout: 1s
+    read-timeout: 2s
+    ttl: 30s
+    stale-ttl: 1h
+
 management:
   endpoints:
     web:
