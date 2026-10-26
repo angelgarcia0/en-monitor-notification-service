@@ -57,6 +57,17 @@ home:
     ttl: 30s
     stale-ttl: 1h
 
+device:
+  # The device service: its internal API answers a device, whose name goes in the wording of a
+  # message. Answers are reused for a while, and the last one is served while the service does
+  # not answer.
+  service:
+    url: ${DEVICE_SERVICE_URL:http://localhost:8084}
+    connect-timeout: 1s
+    read-timeout: 2s
+    ttl: 30s
+    stale-ttl: 1h
+
 management:
   endpoints:
     web:
