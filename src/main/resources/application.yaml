@@ -28,6 +28,24 @@ server:
   # same machine.
   port: ${SERVER_PORT:8087}
 
+# Calls from this service to the others: every one carries the shared token in X-Internal-Token,
+# and the called service checks it and the caller's network.
+internal-api:
+  # Same value in every service. Generate with: openssl rand -hex 32
+  token: ${INTERNAL_API_TOKEN:}
+
+security:
+  # The internal API of the security service: permissions of the admin routes, profiles and
+  # administrators. Its answers are reused for a while, and a call that takes longer than the
+  # timeouts fails: the admin routes answer 503 and mail is left out.
+  service:
+    url: ${SECURITY_SERVICE_URL:http://localhost:8082}
+    connect-timeout: 1s
+    read-timeout: 2s
+    permissions-ttl: 30s
+    administrators-ttl: 30s
+    profiles-ttl: 60s
+
 management:
   endpoints:
     web:
