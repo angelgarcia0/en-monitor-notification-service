@@ -70,6 +70,12 @@
 			<version>${springdoc.version}</version>
 		</dependency>
 
+		<!-- Short-lived cache of what the security, home and device services answer -->
+		<dependency>
+			<groupId>com.github.ben-manes.caffeine</groupId>
+			<artifactId>caffeine</artifactId>
+		</dependency>
+
 		<!-- Database -->
 		<dependency>
 			<groupId>com.mysql</groupId>
