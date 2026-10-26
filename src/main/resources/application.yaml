@@ -28,13 +28,12 @@ server:
   # same machine.
   port: ${SERVER_PORT:8087}
 
-# Calls from this service to the others: every one carries the shared token in X-Internal-Token,
-# and the called service checks it and the caller's network.
-internal-api:
-  # Same value in every service. Generate with: openssl rand -hex 32
-  token: ${INTERNAL_API_TOKEN:}
-
 security:
+  jwt:
+    # The access tokens are issued by the security service; this service only validates them, with
+    # the service's public key and its iss claim (the value the monolith used, kept unchanged).
+    issuer: https://energy-monitor-backend
+    public-key-path: ${SECURITY_JWT_PUBLIC_KEY_PATH:}
   # The internal API of the security service: permissions of the admin routes, profiles and
   # administrators. Its answers are reused for a while, and a call that takes longer than the
   # timeouts fails: the admin routes answer 503 and mail is left out.
@@ -45,6 +44,12 @@ security:
     permissions-ttl: 30s
     administrators-ttl: 30s
     profiles-ttl: 60s
+
+# Calls from this service to the others: every one carries the shared token in X-Internal-Token,
+# and the called service checks it and the caller's network.
+internal-api:
+  # Same value in every service. Generate with: openssl rand -hex 32
+  token: ${INTERNAL_API_TOKEN:}
 
 home:
   # The home service: its internal API answers a home and its members, who an alert or a

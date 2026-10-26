@@ -7,6 +7,7 @@ import com.energymonitor.notification.domain.model.Notification;
 import com.energymonitor.notification.domain.model.NotificationChannel;
 import com.energymonitor.notification.domain.model.NotificationSourceType;
 import com.energymonitor.notification.domain.model.NotificationStatus;
+import com.energymonitor.notification.infrastructure.JwtKeyedTest;
 import jakarta.persistence.EntityManager;
 import java.time.LocalDateTime;
 import org.junit.jupiter.api.AfterEach;
@@ -25,7 +26,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  * those writes. Each test removes the rows it created instead.
  */
 @SpringBootTest
-class NotificationPersistenceTest {
+class NotificationPersistenceTest extends JwtKeyedTest {
 
     private static final String SENT_ID = "ntp0000001";
     private static final LocalDateTime SENT_AT = LocalDateTime.of(2026, 1, 15, 8, 0, 0);

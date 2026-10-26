@@ -7,3 +7,24 @@ spring:
     #   SPRING_DATASOURCE_USERNAME=energy_app SPRING_DATASOURCE_PASSWORD=... ./mvnw test
     username: ${SPRING_DATASOURCE_USERNAME:energy_app}
     password: ${SPRING_DATASOURCE_PASSWORD:}
+
+security:
+  jwt:
+    # A test extending JwtKeyedTest replaces it with a key pair of its own; any other one falls
+    # back to the per-machine public key (see application-local.yaml.example).
+    public-key-path: ${SECURITY_JWT_PUBLIC_KEY_PATH:${user.home}/.energy-monitor/keys/public.pem}
+  service:
+    # Nothing listens here, so the suite never reaches a security service running on this machine.
+    url: http://127.0.0.1:9
+
+internal-api:
+  # Test-only token, committed on purpose: it protects nothing outside the test profile.
+  token: test-only-internal-token
+
+home:
+  service:
+    url: http://127.0.0.1:9
+
+device:
+  service:
+    url: http://127.0.0.1:9

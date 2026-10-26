@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.energymonitor.notification.adapter.out.persistence.adapter.PushDevicePersistenceAdapter;
 import com.energymonitor.notification.domain.model.PushDevice;
 import com.energymonitor.notification.domain.model.PushDevicePlatform;
+import com.energymonitor.notification.infrastructure.JwtKeyedTest;
 import jakarta.persistence.EntityManager;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -23,7 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional
-class PushDevicePersistenceTest {
+class PushDevicePersistenceTest extends JwtKeyedTest {
 
     @Autowired
     private EntityManager entityManager;

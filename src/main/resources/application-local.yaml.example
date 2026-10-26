@@ -9,3 +9,12 @@ spring:
     url: jdbc:mysql://localhost:3306/energy_monitor?connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true
     username: energy_app
     password: "CHANGE_ME"
+
+security:
+  jwt:
+    issuer: https://energy-monitor-backend
+    # The public key of the security service (its SECURITY_JWT_PUBLIC_KEY_PATH), or leave it
+    # empty here and export the environment variable instead. Empty is deliberate: the
+    # application then refuses to start with a message naming the variable. This service never
+    # holds the private key. The path must be absolute: Java does not expand ~ .
+    public-key-path: ${SECURITY_JWT_PUBLIC_KEY_PATH:}
