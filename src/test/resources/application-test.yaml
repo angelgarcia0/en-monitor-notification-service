@@ -1,0 +1,9 @@
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/energy_monitor?connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true
+    # No credential is written here. A password committed to this file belongs to whichever
+    # machine created it and breaks every other one with "Access denied", so the tests read it
+    # from the environment instead:
+    #   SPRING_DATASOURCE_USERNAME=energy_app SPRING_DATASOURCE_PASSWORD=... ./mvnw test
+    username: ${SPRING_DATASOURCE_USERNAME:energy_app}
+    password: ${SPRING_DATASOURCE_PASSWORD:}
