@@ -8,8 +8,10 @@ import com.energymonitor.notification.domain.model.NotificationChannel;
 import com.energymonitor.notification.domain.model.NotificationSourceType;
 import com.energymonitor.notification.domain.model.NotificationStatus;
 import com.energymonitor.notification.infrastructure.JwtKeyedTest;
+import com.energymonitor.notification.infrastructure.mail.AbandonedDeliverySweeper;
 import jakarta.persistence.EntityManager;
 import java.time.LocalDateTime;
+import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -29,10 +31,15 @@ import org.springframework.transaction.support.TransactionTemplate;
 class NotificationPersistenceTest extends JwtKeyedTest {
 
     private static final String SENT_ID = "ntp0000001";
+    private static final String PENDING_ID = "ntp0000002";
     private static final LocalDateTime SENT_AT = LocalDateTime.of(2026, 1, 15, 8, 0, 0);
+    /** Far enough in the past to be older than any sweep cutoff, whatever the time zone. */
+    private static final String LONG_AGO = "2020-01-01 00:00:00";
 
     @Autowired
     private NotificationPersistenceAdapter notifications;
+    @Autowired
+    private AbandonedDeliverySweeper sweeper;
     @Autowired
     private EntityManager entityManager;
     @Autowired
@@ -41,14 +48,21 @@ class NotificationPersistenceTest extends JwtKeyedTest {
     @AfterEach
     void removeEveryRowItCreated() {
         new TransactionTemplate(transactions).executeWithoutResult(status -> entityManager
-                .createNativeQuery("DELETE FROM notification WHERE id_notification = ?1")
-                .setParameter(1, SENT_ID).executeUpdate());
+                .createNativeQuery("DELETE FROM notification WHERE id_notification IN (?1, ?2)")
+                .setParameter(1, SENT_ID).setParameter(2, PENDING_ID).executeUpdate());
     }
 
     private void open(String idNotification) {
         notifications.openForSending(idNotification, "use0000001", null,
                 NotificationSourceType.SECURITY, "rst0000001", "security.password_reset.v1",
                 NotificationChannel.EMAIL);
+    }
+
+    private void openedLongAgo(String... ids) {
+        new TransactionTemplate(transactions).executeWithoutResult(status -> entityManager
+                .createNativeQuery("UPDATE notification SET created_at = ?1"
+                        + " WHERE id_notification IN (?2)")
+                .setParameter(1, LONG_AGO).setParameter(2, List.of(ids)).executeUpdate());
     }
 
     private Notification reload(String idNotification) {
@@ -80,6 +94,24 @@ class NotificationPersistenceTest extends JwtKeyedTest {
         assertThat(read.deliveryStatus()).isEqualTo(NotificationStatus.FAILED);
         assertThat(read.failureReason()).isEqualTo("connection refused");
         assertThat(read.sentAt()).isNull();
+    }
+
+    @Test
+    @DisplayName("the sweep closes an abandoned PENDING row and leaves a SENT one alone")
+    void sweepLeavesASentRowAlone() {
+        open(SENT_ID);
+        notifications.recordSent(SENT_ID, SENT_AT);
+        open(PENDING_ID);
+        openedLongAgo(SENT_ID, PENDING_ID);
+
+        sweeper.sweep();
+
+        assertThat(reload(PENDING_ID).deliveryStatus())
+                .as("control row, proves the sweep reached rows this old")
+                .isEqualTo(NotificationStatus.FAILED);
+        Notification sent = reload(SENT_ID);
+        assertThat(sent.deliveryStatus()).isEqualTo(NotificationStatus.SENT);
+        assertThat(sent.failureReason()).isNull();
     }
 
     @Test

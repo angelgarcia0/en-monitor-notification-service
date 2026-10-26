@@ -22,6 +22,39 @@ spring:
     # table: each service applies its own changelogs.
     change-log: classpath:db/changelog/db.changelog-master.xml
 
+  # Email delivery. Every value comes from the environment: no credential is ever written here.
+  # The username and password default to empty on purpose, so the application still starts with
+  # no mail configured and a send attempt is recorded as failed in the notification log rather
+  # than breaking the whole context. The host is required for Spring to build a JavaMailSender
+  # at all, so it keeps a default.
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    default-encoding: UTF-8
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+          # A silent SMTP server must not hold the sending thread: bounded waits, then give up.
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+
+app:
+  mail:
+    # The address outgoing mail is sent from, which is the same account that owns the app password.
+    from: ${MAIL_FROM:}
+    # A record left PENDING claims a delivery that a previous run started and never finished. The
+    # sweep closes those as failed once they are older than this. Generous compared with any real
+    # SMTP conversation, so a slow send is not mistaken for a dead one; nothing is ever resent,
+    # because only the security service holds the code and its hash.
+    pending-threshold: 30m
+    sweep-delay: 5m
+
 server:
   # 8080 is the API gateway, 8082 the security service, 8083 energy-monitor-backend, 8084 the
   # device service, 8085 the measurement service and 8086 the home service when all run on the
@@ -78,6 +111,10 @@ management:
     web:
       exposure:
         include: health,info
+  health:
+    mail:
+      # A mail server that is down is not the application's health: it must not fail the probe.
+      enabled: false
 
 notification:
   push:
