@@ -17,7 +17,8 @@ import org.springframework.context.ApplicationContext;
  */
 @SpringBootTest(properties = {
     "messaging.security-events.enabled=true",
-    "messaging.home-messages.enabled=true"
+    "messaging.home-messages.enabled=true",
+    "messaging.activity.enabled=true"
 })
 @DisplayName("Messaging switched on")
 class SwitchedOnMessagingTest extends JwtKeyedTest {
@@ -26,11 +27,12 @@ class SwitchedOnMessagingTest extends JwtKeyedTest {
     private ApplicationContext context;
 
     @Test
-    @DisplayName("every consumer and both sets of queues are in the context")
+    @DisplayName("every consumer and every set of queues are in the context")
     void wired() {
         assertThat(context.getBeansOfType(AccountEventsConsumer.class)).hasSize(1);
         assertThat(context.getBeansOfType(MailRequestsConsumer.class)).hasSize(1);
         assertThat(context.getBeansOfType(HomeMessagesConsumer.class)).hasSize(1);
-        assertThat(context.getBeansOfType(Declarables.class)).hasSize(2);
+        assertThat(context.getBeansOfType(ActivityEventsConsumer.class)).hasSize(1);
+        assertThat(context.getBeansOfType(Declarables.class)).hasSize(3);
     }
 }
