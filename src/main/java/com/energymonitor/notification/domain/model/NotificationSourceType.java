@@ -28,5 +28,17 @@ public enum NotificationSourceType {
     SECURITY,
 
     /** A change on the platform an administrator is told about. */
-    ADMINISTRATION
+    ADMINISTRATION,
+
+    /** Something about the account itself, such as the welcome after its first sign-in. */
+    ACCOUNT,
+
+    /**
+     * Something that happened to a home: created, joined, left, a member removed, the owner
+     * changed, the thresholds changed, the home deleted.
+     */
+    HOME,
+
+    /** A device linked to or unlinked from a home. */
+    DEVICE
 }

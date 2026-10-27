@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        Activity notifications: what happened to a user's account and homes, told to the people
+        it concerns. They are rows of the same log, on the IN_APP channel (shown in the apps) and,
+        by each user's preferences, EMAIL and PUSH, with three new sources:
+
+          ACCOUNT  the account itself (the welcome after the first sign-in)
+          HOME     a home: created, joined, left, a member removed, the owner changed, the
+                   thresholds changed, the home deleted
+          DEVICE   a device linked to or unlinked from a home
+
+        Two indexes: a user's in-app notifications, newest first, are what the apps list; and
+        whether anything was already written about one source row is how a message delivered twice
+        by the broker is dropped.
+
+        Rollback deletes the rows of the new sources first: the narrower ENUM could not hold them.
+    -->
+    <changeSet id="notification-006-add-activity-sources" author="angelgarcia0">
+        <comment>Adds the ACCOUNT, HOME and DEVICE sources for activity notifications.</comment>
+
+        <modifyDataType tableName="notification" columnName="source_type"
+                        newDataType="ENUM('ALERT','RECOMMENDATION','SECURITY','ADMINISTRATION','ACCOUNT','HOME','DEVICE')"/>
+        <addNotNullConstraint tableName="notification" columnName="source_type"
+                              columnDataType="ENUM('ALERT','RECOMMENDATION','SECURITY','ADMINISTRATION','ACCOUNT','HOME','DEVICE')"/>
+
+        <createIndex tableName="notification" indexName="idx_notification_user_channel_created">
+            <column name="user_id"/>
+            <column name="channel"/>
+            <column name="created_at"/>
+        </createIndex>
+        <createIndex tableName="notification" indexName="idx_notification_source">
+            <column name="source_type"/>
+            <column name="source_id"/>
+        </createIndex>
+
+        <rollback>
+            <dropIndex tableName="notification" indexName="idx_notification_source"/>
+            <dropIndex tableName="notification" indexName="idx_notification_user_channel_created"/>
+            <delete tableName="notification">
+                <where>source_type IN ('ACCOUNT', 'HOME', 'DEVICE')</where>
+            </delete>
+            <modifyDataType tableName="notification" columnName="source_type"
+                            newDataType="ENUM('ALERT','RECOMMENDATION','SECURITY','ADMINISTRATION')"/>
+            <addNotNullConstraint tableName="notification" columnName="source_type"
+                                  columnDataType="ENUM('ALERT','RECOMMENDATION','SECURITY','ADMINISTRATION')"/>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>
