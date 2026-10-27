@@ -1,7 +1,9 @@
 package com.energymonitor.notification.domain.model;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
  * A record that an outbound message was attempted, and how it ended.
@@ -16,6 +18,10 @@ import java.util.Objects;
  * only a hash elsewhere. What is stored instead is {@link #messageKey()}: a stable name for the
  * wording that was used, which is enough to explain the row to somebody reading it during an
  * audit and is not itself the message.
+ *
+ * <p>An in-app activity notification also keeps {@link #messageParams()}: the names it is worded
+ * with (who acted, the member, the home, the device), so the apps can build its text in the
+ * user's language. They are names, never a secret; every other notification has none.
  *
  * <p>The source is named by {@link #sourceType()} and {@link #sourceId()} rather than by a
  * foreign key. Both point into another module's table, and a foreign key would make this module
@@ -50,6 +56,7 @@ public class Notification {
     private final NotificationSourceType sourceType;
     private final String sourceId;
     private final String messageKey;
+    private final Map<String, String> messageParams;
     private NotificationStatus deliveryStatus;
     private LocalDateTime sentAt;
     private LocalDateTime readAt;
@@ -77,6 +84,21 @@ public class Notification {
                         String sourceId, String messageKey, NotificationStatus deliveryStatus,
                         LocalDateTime sentAt, LocalDateTime readAt, String failureReason,
                         LocalDateTime deletedAt) {
+        this(idNotification, userId, homeId, channel, sourceType, sourceId, messageKey, Map.of(),
+                deliveryStatus, sentAt, readAt, failureReason, deletedAt);
+    }
+
+    /**
+     * Rehydrates a stored notification that carries the values its text is built from.
+     *
+     * @param messageParams the values an in-app activity notification is worded with; empty for
+     *                      every other notification
+     */
+    public Notification(String idNotification, String userId, String homeId,
+                        NotificationChannel channel, NotificationSourceType sourceType,
+                        String sourceId, String messageKey, Map<String, String> messageParams,
+                        NotificationStatus deliveryStatus, LocalDateTime sentAt,
+                        LocalDateTime readAt, String failureReason, LocalDateTime deletedAt) {
         this.idNotification = Preconditions.text(idNotification, 10, "idNotification");
         this.userId = Preconditions.text(userId, 10, "userId");
         this.homeId = optional(homeId, 10, "homeId");
@@ -84,11 +106,23 @@ public class Notification {
         this.sourceType = Preconditions.notNull(sourceType, "sourceType");
         this.sourceId = optional(sourceId, 10, "sourceId");
         this.messageKey = Preconditions.text(messageKey, 100, "messageKey");
+        this.messageParams = presentValues(messageParams);
         this.deliveryStatus = Preconditions.notNull(deliveryStatus, "deliveryStatus");
         this.sentAt = sentAt;
         this.readAt = readAt;
         this.failureReason = failureReason;
         this.deletedAt = deletedAt;
+    }
+
+    /** The values that are present: a name nobody knows is left out rather than stored empty. */
+    private static Map<String, String> presentValues(Map<String, String> values) {
+        if (values == null) {
+            return Map.of();
+        }
+        return values.entrySet().stream()
+                .filter(entry -> entry.getKey() != null && entry.getValue() != null
+                        && !entry.getValue().isBlank())
+                .collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
     /**
@@ -120,6 +154,21 @@ public class Notification {
                                        String messageKey) {
         return new Notification(idNotification, userId, homeId, channel, sourceType, sourceId,
                 messageKey, NotificationStatus.PENDING, null, null, null, null);
+    }
+
+    /**
+     * Creates an in-app notification, worded by the apps from its key and values, that has not
+     * been recorded as delivered yet (NOTIF-INV-001).
+     *
+     * @param messageParams the names the text is built with, such as {@code homeName}
+     * @return a pending notification on channel {@link NotificationChannel#IN_APP}
+     */
+    public static Notification pendingInApp(String idNotification, String userId, String homeId,
+                                            NotificationSourceType sourceType, String sourceId,
+                                            String messageKey, Map<String, String> messageParams) {
+        return new Notification(idNotification, userId, homeId, NotificationChannel.IN_APP,
+                sourceType, sourceId, messageKey, messageParams, NotificationStatus.PENDING, null,
+                null, null, null);
     }
 
     /**
@@ -217,6 +266,11 @@ public class Notification {
     /** @return the stable name of the wording that was used */
     public String messageKey() {
         return messageKey;
+    }
+
+    /** The values an in-app activity notification is worded with; empty for the others. */
+    public Map<String, String> messageParams() {
+        return messageParams;
     }
 
     public NotificationStatus deliveryStatus() {

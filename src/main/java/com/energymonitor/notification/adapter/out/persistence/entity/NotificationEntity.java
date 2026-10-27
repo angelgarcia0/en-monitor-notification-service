@@ -86,6 +86,10 @@ public class NotificationEntity extends BaseAuditEntity {
     @Column(name = "sent_at")
     private LocalDateTime sentAt;
 
+    /** The values an in-app activity notification is worded with, as a JSON object; null otherwise. */
+    @Column(name = "message_params", columnDefinition = "TEXT")
+    private String messageParams;
+
     protected NotificationEntity() {
         // for JPA
     }
@@ -95,6 +99,15 @@ public class NotificationEntity extends BaseAuditEntity {
                               String sourceId, String messageKey,
                               NotificationStatus deliveryStatus, LocalDateTime sentAt,
                               LocalDateTime readAt, String failureReason) {
+        this(idNotification, userId, homeId, channel, sourceType, sourceId, messageKey, null,
+                deliveryStatus, sentAt, readAt, failureReason);
+    }
+
+    public NotificationEntity(String idNotification, String userId, String homeId,
+                              NotificationChannel channel, NotificationSourceType sourceType,
+                              String sourceId, String messageKey, String messageParams,
+                              NotificationStatus deliveryStatus, LocalDateTime sentAt,
+                              LocalDateTime readAt, String failureReason) {
         this.idNotification = idNotification;
         this.userId = userId;
         this.homeId = homeId;
@@ -102,6 +115,7 @@ public class NotificationEntity extends BaseAuditEntity {
         this.sourceType = sourceType;
         this.sourceId = sourceId;
         this.messageKey = messageKey;
+        this.messageParams = messageParams;
         this.deliveryStatus = deliveryStatus;
         this.sentAt = sentAt;
         this.readAt = readAt;
@@ -134,6 +148,10 @@ public class NotificationEntity extends BaseAuditEntity {
 
     public String messageKey() {
         return messageKey;
+    }
+
+    public String messageParams() {
+        return messageParams;
     }
 
     public NotificationStatus deliveryStatus() {
