@@ -49,7 +49,37 @@ class NotifyActivityTest {
     private final HomeDirectoryPort directory = mock(HomeDirectoryPort.class);
     private final NotificationPreferencePort preferences = mock(NotificationPreferencePort.class);
     private final List<Notification> inApp = new ArrayList<>();
-    private final ActivityNotificationPort inAppPort = inApp::add;
+    private final ActivityNotificationPort inAppPort = new ActivityNotificationPort() {
+        @Override
+        public void save(Notification notification) {
+            inApp.add(notification);
+        }
+
+        @Override
+        public List<Notification> listForUser(String userId, String homeId, int limit) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public Optional<Notification> findForUser(String userId, String idNotification) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void markRead(String idNotification, LocalDateTime readAt) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public int markAllRead(String userId, String homeId, LocalDateTime readAt) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void delete(String idNotification, LocalDateTime deletedAt) {
+            throw new UnsupportedOperationException();
+        }
+    };
     private final MemberChannels channels = mock(MemberChannels.class);
     private int ids;
     private final NotifyActivity notifyActivity = new NotifyActivity(directory, preferences,
