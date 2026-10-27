@@ -81,6 +81,17 @@ messaging:
     # alerts in process, and with both every member would get each one twice. Switched on in the
     # deployment that removes the module.
     enabled: ${ALERT_EVENTS_CONSUMER_ENABLED:false}
+  # Topic exchanges of the home service (home.created, home.member-joined, home.member-left,
+  # home.member-removed, home.thresholds-updated, home.ownership-transferred, home.deleted) and of
+  # the device service (device.linked, device.unlinked): what happened to a home and its devices.
+  home-exchange: energy-monitor.home
+  device-exchange: energy-monitor.device
+  activity:
+    # The welcome after the first sign-in (account.first-signed-in), and the home and device
+    # events, told to the people they concern. On by default: nothing else delivers them. Its
+    # queue must exist before the security and home services publish these events: their outboxes
+    # keep a message no queue takes and stop behind it.
+    enabled: ${ACTIVITY_CONSUMER_ENABLED:true}
 
 app:
   mail:
