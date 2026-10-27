@@ -14,6 +14,7 @@ import com.energymonitor.notification.application.port.out.PushDevicePort;
 import com.energymonitor.notification.application.port.out.PushSenderPort;
 import com.energymonitor.notification.application.port.out.PushSubscriptionPort;
 import com.energymonitor.notification.application.port.out.RelayPushSenderPort;
+import com.energymonitor.notification.application.usecase.MemberChannels;
 import com.energymonitor.notification.application.usecase.NotifyAlert;
 import com.energymonitor.notification.domain.model.NotificationPreference;
 import com.energymonitor.notification.domain.model.NotificationSourceType;
@@ -83,6 +84,7 @@ class NotifyAlertTest {
                     prefs.remove(userId);
                 }
             },
+            new MemberChannels(
             new PushSubscriptionPort() {
                 @Override
                 public List<PushSubscription> findByUser(String userId) {
@@ -163,7 +165,7 @@ class NotifyAlertTest {
             mock(NotificationRecordPort.class),
             () -> String.format("not%07d", ++ids),
             JsonMapper.builder().build(),
-            "http://localhost:5173");
+            "http://localhost:5173"));
 
     private static PushSubscription browser(String userId, String endpoint) {
         return new PushSubscription("sub" + endpoint.length(), userId, endpoint, "p".repeat(87), "a".repeat(22));
