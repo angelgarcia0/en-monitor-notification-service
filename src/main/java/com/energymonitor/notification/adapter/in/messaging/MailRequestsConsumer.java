@@ -1,10 +1,10 @@
 package com.energymonitor.notification.adapter.in.messaging;
 
 import com.energymonitor.notification.application.port.out.NotificationRecordPort;
+import com.energymonitor.notification.application.usecase.SendAccountDeletionCode;
 import com.energymonitor.notification.application.usecase.SendEmailVerification;
 import com.energymonitor.notification.application.usecase.SendPasswordResetEmail;
 import com.energymonitor.notification.infrastructure.NotificationMessagingConfiguration;
-import com.energymonitor.notification.infrastructure.mail.EmailSender;
 import java.time.Clock;
 import java.time.Instant;
 import org.slf4j.Logger;
@@ -18,7 +18,7 @@ import org.springframework.stereotype.Component;
 import tools.jackson.databind.ObjectMapper;
 
 /**
- * Mails the verification and recovery codes the security service hands over.
+ * Mails the verification, recovery and account deletion codes the security service hands over.
  *
  * <p>The message id becomes the id of the delivery record. A message delivered twice therefore
  * finds its record and is dropped, and two copies racing each other collide on the primary key,
@@ -35,20 +35,24 @@ public class MailRequestsConsumer {
 
     static final String EMAIL_VERIFICATION = "mail.email-verification";
     static final String PASSWORD_RESET = "mail.password-reset";
+    static final String ACCOUNT_DELETION = "mail.account-deletion";
 
     private static final Logger LOG = LoggerFactory.getLogger(MailRequestsConsumer.class);
 
     private final SendEmailVerification sendEmailVerification;
     private final SendPasswordResetEmail sendPasswordResetEmail;
+    private final SendAccountDeletionCode sendAccountDeletionCode;
     private final NotificationRecordPort records;
     private final ObjectMapper json;
     private final Clock clock;
 
     public MailRequestsConsumer(SendEmailVerification sendEmailVerification,
                                 SendPasswordResetEmail sendPasswordResetEmail,
+                                SendAccountDeletionCode sendAccountDeletionCode,
                                 NotificationRecordPort records, ObjectMapper json, Clock clock) {
         this.sendEmailVerification = sendEmailVerification;
         this.sendPasswordResetEmail = sendPasswordResetEmail;
+        this.sendAccountDeletionCode = sendAccountDeletionCode;
         this.records = records;
         this.json = json;
         this.clock = clock;
@@ -72,16 +76,25 @@ public class MailRequestsConsumer {
                 if (expired(id, request.validUntil())) {
                     return;
                 }
-                send(sendEmailVerification.openForDelivery(id, request.userId(),
-                        request.recipient(), request.code(), request.validUntil()), false);
+                sendEmailVerification.send(sendEmailVerification.openForDelivery(id,
+                        request.userId(), request.recipient(), request.code(),
+                        request.validUntil()));
             } else if (PASSWORD_RESET.equals(type)) {
                 var request = json.readValue(body, PasswordResetMessage.class);
                 if (expired(id, request.validUntil())) {
                     return;
                 }
-                send(sendPasswordResetEmail.openForDelivery(id, request.userId(), null,
-                        request.idResetToken(), request.recipient(), null, request.code(),
-                        request.validUntil()), true);
+                sendPasswordResetEmail.send(sendPasswordResetEmail.openForDelivery(id,
+                        request.userId(), null, request.idResetToken(), request.recipient(), null,
+                        request.code(), request.validUntil()));
+            } else if (ACCOUNT_DELETION.equals(type)) {
+                var request = json.readValue(body, AccountDeletionMessage.class);
+                if (expired(id, request.validUntil())) {
+                    return;
+                }
+                sendAccountDeletionCode.send(sendAccountDeletionCode.openForDelivery(id,
+                        request.userId(), request.recipient(), request.code(),
+                        request.validUntil()));
             } else {
                 throw new AmqpRejectAndDontRequeueException("unexpected message type " + type);
             }
@@ -98,17 +111,14 @@ public class MailRequestsConsumer {
         return true;
     }
 
-    private void send(EmailSender.PreparedDelivery pending, boolean passwordReset) {
-        if (passwordReset) {
-            sendPasswordResetEmail.send(pending);
-        } else {
-            sendEmailVerification.send(pending);
-        }
-    }
-
     /** Body of {@code mail.email-verification}. */
     record EmailVerificationMessage(String userId, String recipient, String code,
                                     Instant validUntil) {
+    }
+
+    /** Body of {@code mail.account-deletion}: the same shape as the verification mail. */
+    record AccountDeletionMessage(String userId, String recipient, String code,
+                                  Instant validUntil) {
     }
 
     /** Body of {@code mail.password-reset}. */

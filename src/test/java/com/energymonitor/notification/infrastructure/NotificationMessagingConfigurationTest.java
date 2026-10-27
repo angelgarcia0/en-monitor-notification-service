@@ -48,7 +48,8 @@ class NotificationMessagingConfigurationTest {
                             tuple(NotificationMessagingConfiguration.ACCOUNT_EVENTS_QUEUE, "account.administered"),
                             tuple(NotificationMessagingConfiguration.ACCOUNT_EVENTS_QUEUE, "account.deleted"),
                             tuple(NotificationMessagingConfiguration.MAIL_QUEUE, "mail.email-verification"),
-                            tuple(NotificationMessagingConfiguration.MAIL_QUEUE, "mail.password-reset"));
+                            tuple(NotificationMessagingConfiguration.MAIL_QUEUE, "mail.password-reset"),
+                            tuple(NotificationMessagingConfiguration.MAIL_QUEUE, "mail.account-deletion"));
             assertDeadLettered(declarables, NotificationMessagingConfiguration.ACCOUNT_EVENTS_QUEUE);
             assertDeadLettered(declarables, NotificationMessagingConfiguration.MAIL_QUEUE);
         });

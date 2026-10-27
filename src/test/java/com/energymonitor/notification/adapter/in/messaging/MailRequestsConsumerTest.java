@@ -9,6 +9,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
 import com.energymonitor.notification.application.port.out.NotificationRecordPort;
+import com.energymonitor.notification.application.usecase.SendAccountDeletionCode;
 import com.energymonitor.notification.application.usecase.SendEmailVerification;
 import com.energymonitor.notification.application.usecase.SendPasswordResetEmail;
 import com.energymonitor.notification.domain.model.Notification;
@@ -34,10 +35,12 @@ class MailRequestsConsumerTest {
 
     private final SendEmailVerification verification = mock(SendEmailVerification.class);
     private final SendPasswordResetEmail passwordReset = mock(SendPasswordResetEmail.class);
+    private final SendAccountDeletionCode accountDeletion = mock(SendAccountDeletionCode.class);
     private final NotificationRecordPort records = mock(NotificationRecordPort.class);
     private final EmailSender.PreparedDelivery pending = mock(EmailSender.PreparedDelivery.class);
     private final MailRequestsConsumer consumer = new MailRequestsConsumer(verification,
-            passwordReset, records, JsonMapper.builder().build(), Clock.fixed(NOW, ZoneOffset.UTC));
+            passwordReset, accountDeletion, records, JsonMapper.builder().build(),
+            Clock.fixed(NOW, ZoneOffset.UTC));
 
     @Test
     @DisplayName("mails a verification code under the message id")
@@ -66,6 +69,33 @@ class MailRequestsConsumerTest {
                         + "\"validUntil\":\"2026-10-20T15:15:00Z\"}"));
 
         verify(passwordReset).send(pending);
+    }
+
+    @Test
+    @DisplayName("mails the code that confirms deleting an account created with Google")
+    void mailsAccountDeletionCode() {
+        given(records.findById("msg0000006")).willReturn(Optional.empty());
+        given(accountDeletion.openForDelivery("msg0000006", "use0000009", "ana@gmail.com",
+                "246810", VALID_UNTIL)).willReturn(pending);
+
+        consumer.on(message("msg0000006", "mail.account-deletion",
+                "{\"userId\":\"use0000009\",\"recipient\":\"ana@gmail.com\",\"code\":\"246810\","
+                        + "\"validUntil\":\"2026-10-20T15:15:00Z\"}"));
+
+        verify(accountDeletion).send(pending);
+        verifyNoInteractions(verification, passwordReset);
+    }
+
+    @Test
+    @DisplayName("drops an account deletion code that has already expired")
+    void dropsExpiredAccountDeletionCode() {
+        given(records.findById("msg0000007")).willReturn(Optional.empty());
+
+        consumer.on(message("msg0000007", "mail.account-deletion",
+                "{\"userId\":\"use0000009\",\"recipient\":\"ana@gmail.com\",\"code\":\"246810\","
+                        + "\"validUntil\":\"2026-10-20T14:59:59Z\"}"));
+
+        verifyNoInteractions(accountDeletion);
     }
 
     @Test

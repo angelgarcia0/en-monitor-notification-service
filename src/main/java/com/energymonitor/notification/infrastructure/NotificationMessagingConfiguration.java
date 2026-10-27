@@ -56,6 +56,7 @@ public class NotificationMessagingConfiguration {
                 bind(accountEvents, security, "account.deleted"),
                 bind(mail, security, "mail.email-verification"),
                 bind(mail, security, "mail.password-reset"),
+                bind(mail, security, "mail.account-deletion"),
                 BindingBuilder.bind(accountEventsDead).to(deadLetters).with(ACCOUNT_EVENTS_QUEUE),
                 BindingBuilder.bind(mailDead).to(deadLetters).with(MAIL_QUEUE));
     }
