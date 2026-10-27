@@ -15,6 +15,8 @@ import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -136,5 +138,19 @@ class NotificationPersistenceTest extends JwtKeyedTest {
         assertThat(notifications.anyAbout(NotificationSourceType.RECOMMENDATION, "rst0000001"))
                 .as("same identifier, another kind of source")
                 .isFalse();
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = NotificationSourceType.class, names = {"ACCOUNT", "HOME", "DEVICE"})
+    @DisplayName("an activity notification is stored in-app with its source")
+    void storesActivitySources(NotificationSourceType source) {
+        notifications.openForSending(SENT_ID, "use0000001", "hom0000001", source, "src0000001",
+                "activity.test.v1", NotificationChannel.IN_APP);
+        notifications.recordSent(SENT_ID, SENT_AT);
+
+        Notification read = reload(SENT_ID);
+        assertThat(read.sourceType()).isEqualTo(source);
+        assertThat(read.channel()).isEqualTo(NotificationChannel.IN_APP);
+        assertThat(read.deliveryStatus()).isEqualTo(NotificationStatus.SENT);
     }
 }
