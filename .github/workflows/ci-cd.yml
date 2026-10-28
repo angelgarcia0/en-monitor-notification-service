@@ -1,0 +1,118 @@
+# CI: the full test suite against a real MySQL on every pull request and push to dev and main.
+# No broker is needed: the test profile turns the outbox relay and the consumers off, and the
+# RabbitMQ publisher test is skipped when no RabbitMQ answers. The MySQL starts empty, so
+# Liquibase creates the notification tables from the changelogs, as on a new server.
+# CD: after a push to main, and once the "production" environment is approved, the server pulls
+# main and rebuilds the notification service (infra/deploy/deploy.sh on the VPS).
+name: Notification service CI/CD
+
+on:
+  pull_request:
+    branches: [dev, main]
+  push:
+    branches: [dev, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: notification-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_DATABASE: energy_monitor
+          MYSQL_USER: energy_app
+          MYSQL_PASSWORD: ci-password
+          MYSQL_ROOT_PASSWORD: ci-root-password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    env:
+      # Throwaway value for this runner only: no real secret is used by the tests.
+      SPRING_DATASOURCE_PASSWORD: ci-password
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      # The tests that boot the application bring their own pair; this one is the fallback the
+      # test profile points at.
+      - name: Generate a throwaway public key
+        run: |
+          keys="$HOME/.energy-monitor/keys"
+          mkdir -p "$keys"
+          openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out "$keys/private.pem"
+          openssl rsa -in "$keys/private.pem" -pubout -out "$keys/public.pem"
+          echo "SECURITY_JWT_PUBLIC_KEY_PATH=$keys/public.pem" >> "$GITHUB_ENV"
+
+      - name: Test
+        run: ./mvnw -B -ntp test
+
+      - name: Keep the test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-reports
+          path: target/surefire-reports/
+          retention-days: 7
+
+  image:
+    name: Docker image
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build
+        run: docker build -t energy-monitor-notification:ci .
+
+  deploy:
+    name: Deploy to production
+    needs: [test, image]
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: production
+      url: https://energy-monitor.tech
+    concurrency:
+      group: production-notification
+      cancel-in-progress: false
+    steps:
+      - name: Deploy over SSH
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          # The key is restricted on the server to infra/deploy/deploy.sh: the argument is the component.
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes -o BatchMode=yes \
+            "$DEPLOY_USER@$DEPLOY_HOST" notification
+
+      - name: Smoke test
+        run: |
+          # deploy.sh already waited for the container to be healthy. Through the gateway the
+          # notification routes still ask for a session.
+          test "$(curl -s -o /dev/null -w '%{http_code}' https://energy-monitor.tech/api/v1/notifications)" = 401
