@@ -1,0 +1,181 @@
+spring:
+  config:
+    import: optional:file:.env[.properties]
+  application:
+    name: notification-service
+
+  profiles:
+    default: local
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+
+  liquibase:
+    # Only the notification changesets. The schema is shared with energy-monitor-backend and the
+    # security, device, measurement and home services (ADR-003), and so is the DATABASECHANGELOG
+    # table: each service applies its own changelogs.
+    change-log: classpath:db/changelog/db.changelog-master.xml
+
+  # Email delivery. Every value comes from the environment: no credential is ever written here.
+  # The username and password default to empty on purpose, so the application still starts with
+  # no mail configured and a send attempt is recorded as failed in the notification log rather
+  # than breaking the whole context. The host is required for Spring to build a JavaMailSender
+  # at all, so it keeps a default.
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    default-encoding: UTF-8
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+          # A silent SMTP server must not hold the sending thread: bounded waits, then give up.
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+
+  # Message broker (RabbitMQ, from infra): the account events and mail requests of the security
+  # service. Each consumer declares and binds its own queue.
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:energy-monitor}
+    password: ${RABBITMQ_PASSWORD:}
+    listener:
+      simple:
+        # A message that keeps failing is retried three times, one, two and four seconds apart,
+        # and then moved to the dead-letter queue of its queue instead of blocking the ones behind.
+        default-requeue-rejected: false
+        retry:
+          enabled: true
+          max-attempts: 3
+          initial-interval: 1s
+          multiplier: 2
+
+messaging:
+  # Topic exchange the security service publishes to (account.*, mail.*), and the dead-letter
+  # exchange of the queues this service consumes.
+  security-exchange: energy-monitor.security
+  dead-letter-exchange: notification-service.dlx
+  security-events:
+    # Off until energy-monitor-backend's notification module is removed: the backend consumes the
+    # same events from queues of its own, and with both an administrator notification could be
+    # written twice. Switched on in the deployment that removes the module.
+    enabled: ${SECURITY_EVENTS_CONSUMER_ENABLED:false}
+  # Topic exchanges energy-monitor-backend announces its alerts (alert.raised) and recommendations
+  # (recommendation.created) to.
+  alert-exchange: energy-monitor.alert
+  recommendation-exchange: energy-monitor.recommendation
+  home-messages:
+    # Off until energy-monitor-backend's notification module is removed: the backend delivers its
+    # alerts in process, and with both every member would get each one twice. Switched on in the
+    # deployment that removes the module.
+    enabled: ${ALERT_EVENTS_CONSUMER_ENABLED:false}
+  # Topic exchanges of the home service (home.created, home.member-joined, home.member-left,
+  # home.member-removed, home.thresholds-updated, home.ownership-transferred, home.deleted) and of
+  # the device service (device.linked, device.unlinked): what happened to a home and its devices.
+  home-exchange: energy-monitor.home
+  device-exchange: energy-monitor.device
+  activity:
+    # The welcome after the first sign-in (account.first-signed-in), and the home and device
+    # events, told to the people they concern. On by default: nothing else delivers them. Its
+    # queue must exist before the security and home services publish these events: their outboxes
+    # keep a message no queue takes and stop behind it.
+    enabled: ${ACTIVITY_CONSUMER_ENABLED:true}
+
+app:
+  mail:
+    # The address outgoing mail is sent from, which is the same account that owns the app password.
+    from: ${MAIL_FROM:}
+    # A record left PENDING claims a delivery that a previous run started and never finished. The
+    # sweep closes those as failed once they are older than this. Generous compared with any real
+    # SMTP conversation, so a slow send is not mistaken for a dead one; nothing is ever resent,
+    # because only the security service holds the code and its hash.
+    pending-threshold: 30m
+    sweep-delay: 5m
+
+server:
+  # 8080 is the API gateway, 8082 the security service, 8083 energy-monitor-backend, 8084 the
+  # device service, 8085 the measurement service and 8086 the home service when all run on the
+  # same machine.
+  port: ${SERVER_PORT:8087}
+
+security:
+  jwt:
+    # The access tokens are issued by the security service; this service only validates them, with
+    # the service's public key and its iss claim (the value the monolith used, kept unchanged).
+    issuer: https://energy-monitor-backend
+    public-key-path: ${SECURITY_JWT_PUBLIC_KEY_PATH:}
+  # The internal API of the security service: permissions of the admin routes, profiles and
+  # administrators. Its answers are reused for a while, and a call that takes longer than the
+  # timeouts fails: the admin routes answer 503 and mail is left out.
+  service:
+    url: ${SECURITY_SERVICE_URL:http://localhost:8082}
+    connect-timeout: 1s
+    read-timeout: 2s
+    permissions-ttl: 30s
+    administrators-ttl: 30s
+    profiles-ttl: 60s
+
+# Calls from this service to the others: every one carries the shared token in X-Internal-Token,
+# and the called service checks it and the caller's network.
+internal-api:
+  # Same value in every service. Generate with: openssl rand -hex 32
+  token: ${INTERNAL_API_TOKEN:}
+
+home:
+  # The home service: its internal API answers a home and its members, who an alert or a
+  # recommendation goes to. Answers are reused for a while, and the last one is served while the
+  # service does not answer.
+  service:
+    url: ${HOME_SERVICE_URL:http://localhost:8086}
+    connect-timeout: 1s
+    read-timeout: 2s
+    ttl: 30s
+    stale-ttl: 1h
+
+device:
+  # The device service: its internal API answers a device, whose name goes in the wording of a
+  # message. Answers are reused for a while, and the last one is served while the service does
+  # not answer.
+  service:
+    url: ${DEVICE_SERVICE_URL:http://localhost:8084}
+    connect-timeout: 1s
+    read-timeout: 2s
+    ttl: 30s
+    stale-ttl: 1h
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  health:
+    mail:
+      # A mail server that is down is not the application's health: it must not fail the probe.
+      enabled: false
+
+notification:
+  # Base URL of the web app, for the links in alert mail.
+  web-url: ${NOTIFICATION_WEB_URL:http://localhost:5173}
+  push:
+    # VAPID key pair for Web Push (base64url: public = 65-byte point, private = 32-byte scalar).
+    # The same pair energy-monitor-backend used: browsers bind their subscription to the public
+    # key, so a new pair silences every browser already subscribed. Empty = Web Push disabled.
+    vapid-public-key: ${NOTIFICATION_VAPID_PUBLIC_KEY:}
+    vapid-private-key: ${NOTIFICATION_VAPID_PRIVATE_KEY:}
+    subject: ${NOTIFICATION_VAPID_SUBJECT:mailto:support.energymonitor@gmail.com}
+    # Credential of the push relay the mobile apps publish through (Expo: "expo push token" in the
+    # project dashboard). Unlike the VAPID pair this is safe to rotate: it authorises us with the
+    # relay, it is not baked into any installation. Empty = app push disabled.
+    expo-access-token: ${EXPO_ACCESS_TOKEN:}

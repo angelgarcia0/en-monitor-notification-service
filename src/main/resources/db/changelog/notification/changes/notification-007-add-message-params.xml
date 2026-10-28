@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        The values an in-app activity notification is worded with: the names of whoever acted,
+        of the member it is about, of the home and of the device, as a JSON object of strings.
+        The apps build the text from message_key and these values, in the user's language, as
+        they do for the administrator notifications.
+
+        Only activity notifications carry it. The body of a message is still never stored: a
+        recovery code travels in the body of its mail, and these values hold names, not secrets.
+    -->
+    <changeSet id="notification-007-add-message-params" author="angelgarcia0">
+        <comment>Adds message_params, the values an in-app activity notification is worded with.</comment>
+
+        <addColumn tableName="notification">
+            <column name="message_params" type="TEXT"/>
+        </addColumn>
+
+        <rollback>
+            <dropColumn tableName="notification" columnName="message_params"/>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>

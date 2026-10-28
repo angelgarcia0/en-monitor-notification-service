@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        Channels a user wants alerts on. No row means the defaults (both on), so existing users
+        need no backfill. No foreign key to user, like notification: the rows are removed when the
+        account is deleted (AccountDeleted), and a key would make that deletion depend on this module.
+    -->
+    <changeSet id="notification-002-create-notification-preference" author="JuanCortes2045">
+        <comment>Per-user notification channel preferences.</comment>
+        <createTable tableName="notification_preference">
+            <column name="user_id" type="VARCHAR(10)">
+                <constraints primaryKey="true" primaryKeyName="pk_notification_preference" nullable="false"/>
+            </column>
+            <column name="email_enabled" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+            <column name="push_enabled" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP"
+                    defaultValueComputed="CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="deleted_at" type="TIMESTAMP"/>
+        </createTable>
+        <rollback>
+            <dropTable tableName="notification_preference"/>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>
