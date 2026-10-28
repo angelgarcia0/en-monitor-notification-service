@@ -28,6 +28,9 @@ public final class AlertMessages {
                     device + " de " + home + " dejó de enviar datos. Revisa que siga enchufado y con Wi-Fi.");
             case "alert.threshold.critical" -> new Message("Consumo crítico",
                     device + " de " + home + " está consumiendo a un nivel crítico.");
+            case "alert.anomaly.device" -> new Message("Consumo inusual",
+                    device + " de " + home + " está consumiendo mucho más de lo que suele. "
+                            + "Revisa si quedó encendido o si algo cambió en su uso.");
             case "alert.limit.daily" -> new Message("Límite diario alcanzado",
                     home + " ya consumió hoy el límite diario que configuraste.");
             case "alert.limit.monthly" -> new Message("Límite mensual alcanzado",
